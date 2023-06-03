@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>reveal.js</title>
+
+		<link rel="stylesheet" href="dist/reset.css">
+		<link rel="stylesheet" href="dist/reveal.css">
+		<link rel="stylesheet" href="dist/theme/black.css">
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="plugin/highlight/monokai.css">
+    <style>
+        .codeSmall {
+            font-size: 24px;
+        }
+    </style>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section data-markdown>
+                    <textarea data-template>
+                        ## About
+                        - David
+                        - Student and academic staff at Aalen University
+                        - __ABSOLUTELY NO__ affiliation with the FIDO Alliance or any other organisation
+                        ---
+                        ## Authentication
+                        - __Knowledge__: Something (only) you know
+                        - __Posession__: Something you own
+                        - __Inherence__: Something inherent to you
+                        ---
+                        Passwords/ PINs are up to this day the most popular authentication method
+                        ---
+                        - OS user accounts
+                        - Credit Crads
+                        - Web-services
+                        - Access control systems
+                        ---
+                        ### Problems
+                        - Passwords must be increasingly complex
+                        - This makes them hard to remember
+                        - Leaked password hashes might be cracked
+                        - Passwords might end up in log-files
+                        - Users might fall for social-engineering/ fishing
+                        ---
+                        Second factors (e.g. OTPs) can help mitigate attacks but they can be bypassed, e.g. using social-engineering 
+
+                        [\[Uber\]](https://www.uber.com/newsroom/security-update/)
+                        ---
+                        Every extra step included into a authentication procedure possibly worsens the user experience
+
+                        <p class="fragment fade-up">Authentication should be quick and painless</p>
+                        ---
+                        ## Requirements
+                        - Users shouldnt be responsible for details like password complexity <!-- .element: class="fragment fade-up" -->
+                        - Authentication should be fast ... <!-- .element: class="fragment fade-up" --> 
+                        - ... and secure <!-- .element: class="fragment fade-up" -->
+                        ## Better solutions? ... <!-- .element: class="fragment fade-up" -->
+                        ---
+                        <blockquote cite="https://fidoalliance.org/fido-authentication/">
+                            The FIDO Alliance developed FIDO Authentication standards based on public key cryptography for authentication that is more secure than passwords and SMS OTPs, simpler for consumers to use, and easier for service providers to deploy and manage. FIDO Authentication enables password-only logins to be replaced with secure and fast login experiences across websites and apps 
+                        </blockquote>
+
+                        [\[FIDO Alliance\]](https://fidoalliance.org/fido-authentication/)
+                        ---
+                        ## Public-key cryptography
+                        - For each `$ k_{priv} $` there is a corresponding `$ k_{pub} $`
+                        - `$ k_{priv} $` stays private and `$ k_{pub} $` is shared with others
+                        - It's very hard to compute `$ k_{priv} $` from `$ k_{pub} $`
+                        - A ciphertext `$ c = E_{k_{priv}}(m) $` can only be decrypted using `$ k_{pub} $`
+                        - `$ m = D_{k_{pub}}(E_{k_{priv}}(m)) $`
+                        ---
+                        Encrypting (the hash of) a message `$ m $` using a private key `$ k_{priv} $` is referred to as making a signature
+                    </textarea>
+                </section>
+                <section>
+                    <div class="mermaid">
+                        <pre>
+                          %%{init: {'theme': 'dark', 'themeVariables': { 'darkMode': true }}}%%
+                          sequenceDiagram
+                            Zero->>Ember: submit public key 
+                            Note left of Zero: c = E(H(m)) 
+                            Zero->>Ember: (c, m) 
+                            Note right of Ember: H(m) =? D(c)
+                        </pre>
+                    </div>
+                </section>
+				<section data-markdown>
+                    <textarea data-template>
+                        ## FIDO2
+
+                        FIDO2 uses digital signatures for authentication and consits of two sub-protocols, CTAP2 and WebAuthn
+                        ---
+                        <img class="" src="images/all.png">
+                        ---
+                        ## Registration
+                        ---
+                        <img class="" src="images/signup.png">
+                        ---
+                        ## Authentication
+                        ---
+                        <img class="" src="images/signin.png">
+                        ---
+                        ## Advantages
+                        - Uses unique private keys bound to a relying party
+                        - Only the public key is stored server-side
+                        - Easy to use (if implemented correctly)
+                        - Authenticators may be additionally protected by a PIN or built in user verification method
+                        ---
+                        ## FIDO2 authenticator
+                        Must implement the CTAP2 protocol
+                        ---
+                        - Application layer: The API for creating new credentials and generating assertions
+                        - Encoding layer: Data is encoded using the Concise Binary Object Representation (CBOR) <!-- .element: class="fragment fade-up" -->
+                        - Transport layer: Inter process communication, e.g. CTAPHID for USB <!-- .element: class="fragment fade-up" -->
+                    </textarea>
+                </section>
+                <section>
+                    <h2>CTAP2</h2>
+                    <img class="r-stretch" src="images/ctap2.png">
+                </section>
+				<section data-markdown>
+                    <textarea data-template>
+                        ## Authenticator Library
+                        - Provides CTAP2 API calls (e.g. authenticatorMakeCredential, authenticatorGetAssertion)
+                        - Allows encoding/ decoding of CBOR messages
+                        - Provides protocols for the different transports (e.g. CTAPHID for USB)
+                        - The user provides callbacks for the interaction with the system (e.g. microcontroller, OS, ...)
+                    </textarea>
+                </section>
+                <section>
+                    Application and Encoding
+                  <pre><code data-trim data-noescape data-line-numbers="2-14|16-28|29-31">
+                  var authenticator = fido.ctap.authenticator.Authenticator{
+                    .settings = .{
+                        .versions = &.{ .FIDO_2_0, .FIDO_2_1 },
+                        .aaguid = "\x7f\x15\x82\x74\xaa\xb6\x44\x3d\x9b\xcf\x8a\x3f\x69\x29\x7c\x88".*,
+                        .options = .{
+                            .plat = true,
+                            .clientPin = true,
+                            .pinUvAuthToken = true,
+                        },
+                        .pinUvAuthProtocols = &.{.V2},
+                        .transports = &.{.usb},
+                        .algorithms = &.{.{ .alg = .Es256 }},
+                        .firmwareVersion = 0xcafe,
+                    },
+                    .attestation_type = .Self,
+                    .callbacks = .{
+                        .rand = callbacks.rand,
+                        .millis = callbacks.millis,
+                        .up = callbacks.up,
+                        .loadCurrentStoredPIN = callbacks.loadCurrentStoredPIN,
+                        .storeCurrentStoredPIN = callbacks.storeCurrentStoredPIN,
+                        .loadPINCodePointLength = callbacks.loadPINCodePointLength,
+                        .storePINCodePointLength = callbacks.storePINCodePointLength,
+                        .get_retries = callbacks.get_retries,
+                        .set_retries = callbacks.set_retries,
+                        .load_credential_by_id = callbacks.load_credential_by_id,
+                        .store_credential_by_id = callbacks.store_credential_by_id,
+                    },
+                    .token = .{
+                        .two = fido.ctap.pinuv.PinUvAuth.v2(callbacks.rand),
+                    },
+                    .allocator = gpa.allocator(),
+                  };
+                  </code></pre>
+                </section>
+                <section>
+                    Transport
+                    <pre><code data-trim data-noescape data-line-numbers="2|4-7|10-12">
+                    while (true) {
+                        const msg = try usb.read();
+
+                        var response = fido.ctap.transports.ctaphid.authenticator.handle(
+                            msg,
+                            &authenticator,
+                        );
+
+                        if (response) |*resp| {
+                            while (resp.next()) |packet| {
+                                try usb.write(packet);
+                            }
+                        }
+                    }
+                    </code></pre>
+                </section>
+				<section data-markdown>
+                    <textarea data-template>
+                        ## Why Zig?
+                        ---
+                        Zig already provides a solid foundation of cryptographic algorithms in its standard library
+
+                        - Signature algorithms
+                        - Hashing
+                        - Encryption
+                        - Support for different elliptic curves <!-- .element: class="fragment fade-up" -->
+                    </textarea>
+                </section>
+                <section>
+                    <pre><code data-trim data-noescape data-line-numbers="1-3|10-16">
+                    pub const EcdhP256 = Ecdh(crypto.ecc.P256);
+
+                    pub fn Ecdh(comptime Curve: type) type {
+                        return struct {
+                            pub const secret_length = Curve.scalar.encoded_length;
+                            pub const public_length = Curve.Fe.encoded_length;
+
+                            // ...
+
+                            pub fn scalarmultXY(secret_key: [secret_length]u8, pub_x: [public_length]u8, pub_y: [public_length]u8) !Curve {
+                                const x = try Curve.Fe.fromBytes(pub_x[0..].*, .Big);
+                                const y = try Curve.Fe.fromBytes(pub_y[0..].*, .Big);
+                                const c = try Curve.fromAffineCoordinates(.{ .x = x, .y = y });
+                                const secret = try c.mul(secret_key, .Little);
+                                return secret;
+                            }
+                        };
+                    }
+                    </code></pre>
+                </section>
+				<section data-markdown>
+                    <textarea data-template>
+                        Support for different architectures and operating systems
+
+                        - [nRF52840 MDK USB Dongle](https://github.com/r4gus/candy-stick-nrf)
+                        - [Linux](https://github.com/r4gus/fido2/blob/revC/platform-auth/main.zig)
+                    </textarea>
+                </section>
+                <section class="codeSmall">
+                    Easy to generate code at compile time
+                    <pre><code data-trim data-noescape data-line-numbers="1,8|3|5|7|3,9|59,66,67|71,72|77|94,97|114-118">
+                    pub fn parse(
+                        /// The type to deserialize to
+                        comptime T: type,
+                        /// The data item to deserialize
+                        item: DataItem,
+                        /// Options to effect the behaviour of this function
+                        options: ParseOptions,
+                    ) ParseError!T {
+                        switch (@typeInfo(T)) {
+                            .Bool => {
+                                return switch (item.getType()) {
+                                    .False => false,
+                                    .True => true,
+                                    else => ParseError.UnexpectedItem,
+                                };
+                            },
+                            .Float, .ComptimeFloat => {
+                                return switch (item.getType()) {
+                                    .Float => if (item.float()) |x| @floatCast(T, x) else return ParseError.Malformed,
+                                    else => ParseError.UnexpectedItem,
+                                };
+                            },
+                            .Int, .ComptimeInt => {
+                                switch (item.getType()) {
+                                    .Int => {
+                                        const v = if (item.int()) |x| x else return ParseError.Malformed;
+                                        if (v > std.math.maxInt(T) or v < std.math.minInt(T))
+                                            return ParseError.Overflow;
+
+                                        return @intCast(T, v);
+                                    },
+                                    else => return ParseError.UnexpectedItem,
+                                }
+                            },
+                            .Optional => |optionalInfo| {
+                                return switch (item.getType()) {
+                                    .Null, .Undefined => null,
+                                    else => try parse(optionalInfo.child, item, options),
+                                };
+                            },
+                            .Enum => |enumInfo| {
+                                switch (item.getType()) {
+                                    .Int => {
+                                        const v = if (item.int()) |x| x else return ParseError.Malformed;
+                                        return try std.meta.intToEnum(T, v);
+                                    },
+                                    .TextString => {
+                                        const v = if (item.string()) |x| x else return ParseError.Malformed;
+                                        inline for (enumInfo.fields) |field| {
+                                            if (cmp(field.name, v)) {
+                                                return @field(T, field.name);
+                                            }
+                                        }
+                                        return ParseError.InvalidEnumTag;
+                                    },
+                                    else => return ParseError.UnexpectedItem,
+                                }
+                            },
+                            .Struct => |structInfo| {
+                                // Custom parse function overrides default behaviour
+                                const has_parse = comptime std.meta.trait.hasFn("cborParse")(T);
+                                if (has_parse and !options.from_cborParse) {
+                                    return T.cborParse(item, options);
+                                }
+
+                                switch (item.getType()) {
+                                    .Map => {
+                                        var r: T = undefined;
+                                        var fields_seen = [_]bool{false} ** structInfo.fields.len;
+
+                                        var v = if (item.map()) |x| x else return ParseError.Malformed;
+                                        while (v.next()) |kv| {
+                                            var found = false;
+
+                                            if (kv.key.getType() != .TextString and kv.key.getType() != .Int) continue;
+
+                                            inline for (structInfo.fields, 0..) |field, i| {
+                                                var match: bool = false;
+                                                var name: []const u8 = field.name;
+
+                                                // Is there an alias specified?
+                                                for (options.field_settings) |fs| {
+                                                    if (std.mem.eql(u8, field.name, fs.name)) {
+                                                        if (fs.alias) |alias| {
+                                                            name = alias;
+                                                        }
+                                                    }
+                                                }
+
+                                                switch (kv.key.getType()) {
+                                                    .Int => {
+                                                        const x = if (kv.key.int()) |y| y else return ParseError.Malformed;
+                                                        const y = s2n(name);
+                                                        match = x == y;
+                                                    },
+                                                    else => {
+                                                        match = std.mem.eql(u8, name, if (kv.key.string()) |x| x else return ParseError.Malformed);
+                                                    },
+                                                }
+
+                                                if (match) {
+                                                    if (fields_seen[i]) {
+                                                        switch (options.duplicate_field_behavior) {
+                                                            .UseFirst => {
+                                                                found = true;
+                                                                break;
+                                                            },
+                                                            .Error => return ParseError.DuplicateCborField,
+                                                        }
+                                                    }
+
+                                                    var child_options = options;
+                                                    child_options.from_cborParse = false;
+                                                    @field(r, field.name) = try parse(
+                                                        field.type,
+                                                        kv.value,
+                                                        child_options,
+                                                    );
+                                                    errdefer {
+                                                        // TODO: add error defer to free memory
+                                                        const I = @typeInfo(@TypeOf(@field(r, field.name)));
+
+                                                        switch (I) {
+                                                            .Pointer => |ptrInfo| {
+                                                                _ = ptrInfo;
+                                                            },
+                                                            else => {},
+                                                        }
+                                                    }
+
+                                                    fields_seen[i] = true;
+                                                    found = true;
+                                                    break;
+                                                }
+                                            }
+
+                                            if (!found and !options.ignore_unknown_fields) {
+                                                return ParseError.UnknownField;
+                                            }
+                                        }
+
+                                        inline for (structInfo.fields, 0..) |field, i| {
+                                            if (!fields_seen[i]) {
+                                                switch (@typeInfo(field.type)) {
+                                                    .Optional => @field(r, field.name) = null,
+                                                    else => {
+                                                        if (field.default_value) |default_ptr| {
+                                                            if (!field.is_comptime) {
+                                                                const default = @ptrCast(*align(1) const field.type, default_ptr).*;
+                                                                @field(r, field.name) = default;
+                                                            }
+                                                        } else {
+                                                            return ParseError.MissingField;
+                                                        }
+                                                    },
+                                                }
+                                            }
+                                        }
+
+                                        return r;
+                                    },
+                                    else => return ParseError.UnexpectedItem,
+                                }
+                            },
+                            .Array => |arrayInfo| {
+                                switch (item.getType()) {
+                                    .Array => {
+                                        var v = if (item.array()) |x| x else return ParseError.Malformed;
+                                        var r: T = undefined;
+                                        var i: usize = 0;
+
+                                        while (i < r.len) : (i += 1) {
+                                            r[i] = try parse(arrayInfo.child, if (v.next()) |x| x else return ParseError.Malformed, options);
+                                        }
+
+                                        return r;
+                                    },
+                                    .ByteString, .TextString => {
+                                        if (arrayInfo.child != u8) return ParseError.UnexpectedItem;
+
+                                        var v = if (item.string()) |x| x else return ParseError.Malformed;
+                                        var r: T = undefined;
+
+                                        if (v.len > r[0..].len) return ParseError.Overflow;
+                                        std.mem.copy(u8, r[0..v.len], v);
+
+                                        return r;
+                                    },
+                                    else => {
+                                        return ParseError.UnexpectedItem;
+                                    },
+                                }
+                            },
+                            .Pointer => |ptrInfo| {
+                                const allocator = options.allocator orelse return ParseError.AllocatorRequired;
+
+                                switch (ptrInfo.size) {
+                                    .One => {
+                                        // We use *ptrInfo.child instead of T to allow const and non-const types
+                                        const r: *ptrInfo.child = try allocator.create(ptrInfo.child);
+                                        errdefer allocator.destroy(r);
+                                        r.* = try parse(ptrInfo.child, item, options);
+                                        return r;
+                                    },
+                                    .Slice => {
+                                        switch (item.getType()) {
+                                            .ByteString, .TextString => {
+                                                const v = if (item.string()) |x| x else return ParseError.Malformed;
+                                                if (ptrInfo.child != u8) {
+                                                    return ParseError.UnexpectedItem;
+                                                }
+
+                                                var sentinel: usize = 0;
+                                                if (ptrInfo.sentinel != null) {
+                                                    sentinel += 1;
+                                                }
+
+                                                var r: []ptrInfo.child = try allocator.alloc(ptrInfo.child, v.len + sentinel);
+                                                errdefer allocator.free(r);
+                                                std.mem.copy(ptrInfo.child, r[0..], v[0..]);
+                                                if (ptrInfo.sentinel) |some| {
+                                                    const sentinel_value = @ptrCast(*align(1) const ptrInfo.child, some).*;
+                                                    r[r.len - 1] = sentinel_value;
+                                                    return r[0 .. r.len - 1 :sentinel_value];
+                                                }
+
+                                                return r;
+                                            },
+                                            .Array => {
+                                                var v = if (item.array()) |x| x else return ParseError.Malformed;
+                                                var arraylist = std.ArrayList(ptrInfo.child).init(allocator);
+                                                errdefer {
+                                                    // TODO: take care of children
+                                                    arraylist.deinit();
+                                                }
+
+                                                while (v.next()) |elem| {
+                                                    try arraylist.ensureUnusedCapacity(1);
+                                                    const x = try parse(ptrInfo.child, elem, options);
+                                                    arraylist.appendAssumeCapacity(x);
+                                                }
+
+                                                if (ptrInfo.sentinel) |some| {
+                                                    const sentinel_value = @ptrCast(*align(1) const ptrInfo.child, some).*;
+                                                    try arraylist.append(sentinel_value);
+                                                    const output = try arraylist.toOwnedSlice();
+                                                    return output[0 .. output.len - 1 :sentinel_value];
+                                                }
+
+                                                return arraylist.toOwnedSlice();
+                                            },
+                                            else => return ParseError.UnexpectedItem,
+                                        }
+                                    },
+                                    else => return Error.UnsupportedType,
+                                }
+                            },
+                            .Union => |unionInfo| {
+                                // Custom parse function overrides default behaviour
+                                const has_parse = comptime std.meta.trait.hasFn("cborParse")(T);
+                                if (has_parse and !options.from_cborParse) {
+                                    return T.cborParse(item, options);
+                                }
+
+                                if (unionInfo.tag_type) |_| {
+                                    // try each union field until we find one that matches
+                                    inline for (unionInfo.fields) |u_field| {
+                                        if (parse(u_field.type, item, options)) |value| {
+                                            return @unionInit(T, u_field.name, value);
+                                        } else |err| {
+                                            // Bubble up error.OutOfMemory
+                                            // Parsing some types won't have OutOfMemory in their
+                                            // error-sets, for the condition to be valid, merge it in.
+                                            if (@as(@TypeOf(err) || error{OutOfMemory}, err) == error.OutOfMemory) return err;
+                                            // Bubble up AllocatorRequired, as it indicates missing option
+                                            if (@as(@TypeOf(err) || error{AllocatorRequired}, err) == error.AllocatorRequired) return err;
+                                            // otherwise continue through the `inline for`
+                                        }
+                                    }
+                                    return ParseError.NoUnionMemberMatched;
+                                } else {
+                                    @compileError("Unable to parse into untagged union '" ++ @typeName(T) ++ "'");
+                                }
+                            },
+                            else => return Error.UnsupportedType,
+                        }
+                    }
+                    </code></pre>
+                </section>
+                <section>
+                    Easy to generate code at compile time
+                    <pre><code data-trim data-noescape>
+                    cbor.parse(MakeCredential, cbor.DatItem.new(buffer[0..]), .{
+                        .allocator = self.allocator,
+                    })
+                    </code></pre>
+                </section>
+				<section data-markdown>
+                    <textarea data-template>
+                        ## Closing Thoughts
+                        - Authentication is a central part of our online activities
+                        - Unfortunately there are many pitfalls
+                        - FIDO2 could be a better alternative, but its far away from widespread adoption
+                            - Hardware authenticators are expensive
+                            - Missing IPC spec for platform authenticators
+                            - Some browsers, and a lot of websites lack support
+                        - What's missing is a (platform-)authenticator you can love ;)
+                        ---
+                        ## QUESTIONS ?
+                    </textarea>
+                </section>
+			</div>
+		</div>
+
+		<script src="dist/reveal.js"></script>
+		<script src="plugin/notes/notes.js"></script>
+		<script src="plugin/markdown/markdown.js"></script>
+		<script src="plugin/highlight/highlight.js"></script>
+		<script src="plugin/math/math.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/reveal.js-mermaid-plugin@1.1.0/plugin/mermaid/mermaid.js"></script>
+		<script>
+			// More info about initialization & config:
+			// - https://revealjs.com/initialization/
+			// - https://revealjs.com/config/
+			Reveal.initialize({
+				hash: true,
+                katex: {
+                    version: 'latest',
+                    delimiters: [
+                      {left: '$$', right: '$$', display: true},
+                      {left: '$', right: '$', display: false},
+                      {left: '\\(', right: '\\)', display: false},
+                      {left: '\\[', right: '\\]', display: true}
+                   ],
+                   ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+                },
+
+                // mermaid initialize config
+                mermaid: {
+                  // flowchart: {
+                  //   curve: 'linear',
+                  // },
+                },
+
+				// Learn about plugins: https://revealjs.com/plugins/
+				plugins: [ 
+                    RevealMath.KaTeX, 
+                    RevealMarkdown, 
+                    RevealHighlight, 
+                    RevealNotes,
+                    RevealMermaid,
+                ],
+
+                dependencies: [
+                    // Other plugins
+                    {src: 'node_modules/revealjs-animated/dist/revealjs-animated.js', async: true}
+                ]
+			});
+		</script>
+	</body>
+</html>
