@@ -23,6 +23,8 @@
 			<div class="slides">
 				<section data-markdown>
                     <textarea data-template>
+                        ## Implementation of a FIDO2 Authenticator Library in Zig
+                        ---
                         ## About
                         - David
                         - Student and academic staff at Aalen University
@@ -36,7 +38,7 @@
                         Passwords/ PINs are up to this day the most popular authentication method
                         ---
                         - OS user accounts
-                        - Credit Crads
+                        - Credit Cards
                         - Web-services
                         - Access control systems
                         ---
@@ -68,11 +70,14 @@
                         [\[FIDO Alliance\]](https://fidoalliance.org/fido-authentication/)
                         ---
                         ## Public-key cryptography
+                        <!--
                         - For each `$ k_{priv} $` there is a corresponding `$ k_{pub} $`
                         - `$ k_{priv} $` stays private and `$ k_{pub} $` is shared with others
                         - It's very hard to compute `$ k_{priv} $` from `$ k_{pub} $`
                         - A ciphertext `$ c = E_{k_{priv}}(m) $` can only be decrypted using `$ k_{pub} $`
                         - `$ m = D_{k_{pub}}(E_{k_{priv}}(m)) $`
+                        -->
+                        <img class="" src="images/asym.png">
                         ---
                         Encrypting (the hash of) a message `$ m $` using a private key `$ k_{priv} $` is referred to as making a signature
                     </textarea>
@@ -93,7 +98,7 @@
                     <textarea data-template>
                         ## FIDO2
 
-                        FIDO2 uses digital signatures for authentication and consits of two sub-protocols, CTAP2 and WebAuthn
+                        FIDO2 uses digital signatures for authentication and consists of two sub-protocols, CTAP2 and WebAuthn
                         ---
                         <img class="" src="images/all.png">
                         ---
@@ -114,6 +119,7 @@
                         ## FIDO2 authenticator
                         Must implement the CTAP2 protocol
                         ---
+                        ## Application structure
                         - Application layer: The API for creating new credentials and generating assertions
                         - Encoding layer: Data is encoded using the Concise Binary Object Representation (CBOR) <!-- .element: class="fragment fade-up" -->
                         - Transport layer: Inter process communication, e.g. CTAPHID for USB <!-- .element: class="fragment fade-up" -->
@@ -540,7 +546,10 @@
                             - Hardware authenticators are expensive
                             - Missing IPC spec for platform authenticators
                             - Some browsers, and a lot of websites lack support
-                        - What's missing is a (platform-)authenticator you can love ;)
+                        ---
+                        #### What's missing is a (platform-)authenticator you can love ;)
+
+                        -  [https://github.com/r4gus/fido2](https://github.com/r4gus/fido2)
                         ---
                         ## QUESTIONS ?
                     </textarea>
